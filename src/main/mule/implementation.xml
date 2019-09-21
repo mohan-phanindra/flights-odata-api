@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	
+	<sub-flow name="get-flights-implementation-sub-flow" doc:id="2bd5cd25-d4ca-4434-9a3d-8625da43527c" >
+		<logger level="INFO" doc:name="Logger" doc:id="630e0050-a28c-4397-b1f1-a7be00dedb2c" />
+		 <flow-ref doc:name="inlineCount" doc:id="8a0f6e41-a828-4348-be1e-02b717ac3270" name="inlineCount" target="inlineCount" targetValue="#[payload[0][0] as String]"/>
+		<choice doc:name="Choice" doc:id="819d0893-3a16-482e-a67e-da38e01ff3f8" >
+			<when expression="#[vars.odata.fields == null and vars.odata.keyNames == null]">
+				<ee:transform doc:name="Transform Message" doc:id="707a6c76-b045-4fe7-8d0d-62463569c330" >
+					<ee:message >
+					</ee:message>
+					<ee:variables >
+						<ee:set-variable resource="dwlScripts/restOdataAttributes.dwl" variableName="odata" />
+					</ee:variables>
+				</ee:transform>
+				<logger level="INFO" doc:name="Logger" doc:id="b79e1d36-58d1-4332-9523-767594b5ade6" message="Calling AS AMERICAN REST API"/>
+			</when>
+			<otherwise >
+				<logger level="INFO" doc:name="Logger" doc:id="71c6bbd7-199d-478d-8b67-6fa4b029e537" message="Calling AS AMERICAN ODATA API"/>
+			</otherwise>
+		</choice>
+		<ee:transform doc:name="Build Query" doc:id="2a0ddf33-f3c4-403f-84fa-0e04b5ac9ded" >
+			<ee:message >
+				<ee:set-payload resource="dwlScripts/getFlightsBuildQuery.dwl" />
+			
+</ee:message>
+		</ee:transform>
+		<logger level="INFO" message="#[payload]" doc:name="Log Query"/>
+		<db:select doc:name="Select" doc:id="4f80933a-9da3-45f7-8b2d-5cbaad11539f" config-ref="Database_Config">
+			<db:sql >#[payload]</db:sql>
+		</db:select>
+		<choice doc:name="Check Response" doc:id="61d973cd-3e5c-4b8b-8202-1bab8614160b" >
+			<when  expression="#[sizeOf(payload) == 0]">
+				<set-variable value="404" doc:name="Set HTTP Status" doc:id="2291ca88-258e-41f5-91bf-a86bb535130b" variableName="httpStatus" />
+				<set-payload value='{ "message": "Resource not found" }' doc:name="Set Payload" doc:id="40afcdd7-23f7-496c-9f30-a0d27717956b" mimeType="application/json" />
+			</when>
+			<otherwise >
+				<ee:transform doc:name="Build Response" doc:id="f9da2a85-9075-4a6b-ad56-97b8c43442da" >
+					<ee:message >
+						<ee:set-payload resource="dwlScripts/getFlightsFinalResponse.dwl" />
+					
+</ee:message>
+				</ee:transform>
+			</otherwise>
+		</choice>
+	</sub-flow>
+<!-- 	<sub-flow name="put-flights-id-implementation-sub-flow" doc:id="6ed086b5-362d-45c5-a228-af1a1b8634c3" >
+		<logger level="INFO" doc:name="Logger" doc:id="21dd6508-f8ea-4751-be4d-901255336d4a" />
+		 <set-variable value="#[payload.CustomerID]" doc:name="Set CustomerID" doc:id="aa79f47d-2b9f-439b-a0eb-ab603f09adf0" variableName="id" />
+		<ee:transform doc:name="Build Query" doc:id="3751c3e0-efb4-4de5-84f1-739f6ed8a947" >
+			<ee:message >
+				<ee:set-payload resource="dwlScripts/putFlightsIdBuildQuery.dwl" />
+			
+</ee:message>
+		</ee:transform>
+		<logger level="INFO" message="SQL Query: #[payload]" doc:name="Log Query"/>
+		<db:update doc:name="Update" doc:id="63c3fa08-9c1c-416a-9788-5f5df2c5855e" config-ref="Database_Config">
+			<db:sql >#[payload]</db:sql>
+		</db:update>
+		<choice doc:name="Check Response" doc:id="fed2ef9c-6b7b-47b0-bd8a-f29b91310ba7" >
+			<when expression="#[payload.affectedRows == 0]" >
+				<set-variable value="404" doc:name="Set HTTP Status" doc:id="af3eefad-6915-487f-a2fb-60b736e1ec7f" variableName="httpStatus" />
+				<set-payload value='{ "message": "Resource not found" }' doc:name="Set Payload" doc:id="5d0775cb-c403-478b-b934-91cd59e33e5c" mimeType="application/json" />
+			</when>
+			<otherwise>
+				<set-variable value="204" doc:name="Set HTTP Status" doc:id="ad4d1303-f571-4fc6-97f4-0fad1fca4389" variableName="httpStatus" />
+				<ee:transform doc:name="Set Payload" doc:id="7750a6e4-9256-4e86-a1f5-978c7e06cdd5" >
+					<ee:message >
+						<ee:set-payload resource="dwlScripts/putFlightsIdFinalResponse.dwl" />
+					
+</ee:message>
+				</ee:transform>
+			</otherwise>
+		</choice>
+	</sub-flow> -->
+	<!-- <sub-flow name="post-flights-id-implementation-sub-flow" doc:id="689ccff7-2fd2-4b25-bcc4-5347a012d1a6" >
+		<logger level="INFO" doc:name="Logger" doc:id="3d7242da-b294-4881-87f6-9c4041a9f7f0" />
+		<set-variable value="#[payload.CustomerID]" doc:name="Set CustomerID" doc:id="27dd40cd-eea9-430f-b954-ae7cbb097627" variableName="id"/>
+		<ee:transform doc:name="Build Query" doc:id="427f5d77-ae45-47e1-ad37-316824a58d3d" >
+			<ee:message >
+				<ee:set-payload resource="dwlScripts/postFlightsIdBuildQuery.dwl" />
+			
+</ee:message>
+		</ee:transform>
+		<logger level="INFO" message="SQL query: #[payload]" doc:name="Log Query"/>
+		<db:insert doc:name="Insert" doc:id="cbaa7dd9-27ad-4238-8eca-4060186aeb11" config-ref="Database_Config">
+			<db:sql >#[payload]</db:sql>
+		</db:insert>
+		<ee:transform doc:name="Build Query" doc:id="78b9da4a-9bc8-4549-9b31-4ef9dbbf2e31" >
+			<ee:message >
+				<ee:set-payload resource="dwlScripts/postSelectFlightsIdBuildQuery.dwl" />
+			
+</ee:message>
+		</ee:transform>
+		<db:select doc:name="Select" doc:id="014feebd-71f0-4305-95c3-f655ab3a64e5" config-ref="Database_Config">
+			<ee:repeatable-file-store-iterable />
+			<db:sql >#[payload]
+</db:sql>
+		</db:select>
+		<ee:transform doc:name="Build Response" doc:id="166f5c14-ab4c-49e6-8e96-fb7b78f3ab82" >
+			<ee:message >
+				<ee:set-payload resource="dwlScripts/postFlightsIdFinalResponse.dwl" />
+			
+</ee:message>
+		</ee:transform>
+	</sub-flow> -->
+	<!-- <sub-flow name="delete-flights-implementation-sub-flow" doc:id="a762b816-dfc6-45cd-b17f-ec4d4c3ebc65" >
+		<logger level="INFO" doc:name="Logger" doc:id="8599c2b9-a333-4154-8854-3fcaed486528" />
+		<ee:transform doc:name="Build Query" doc:id="b38b147c-6bdd-4518-aa1b-08c2546a4ecb" >
+			<ee:message >
+				<ee:set-payload resource="dwlScripts/deleteFlightsIdBuildQuery.dwl" />
+			
+</ee:message>
+		</ee:transform>
+		<db:delete doc:name="Delete" doc:id="b0a62e93-723c-43aa-8754-3d10e06ddcd5" config-ref="Database_Config">
+			<db:sql >#[payload]</db:sql>
+		</db:delete>
+		<choice doc:name="Check Response " doc:id="2de4a28f-b3c8-48d8-bc89-84f7a0b382ce" >
+			<when expression="#[payload == 0]" >
+				<set-variable value="404" doc:name="Set HTTP Satus" doc:id="c216dc95-1d6d-4f72-a53c-d79dfe56482f" variableName="httpStatus" />
+				<set-payload value='{ "message": "Resource not found" }' doc:name="Set Payload" doc:id="55a19c6e-7dfa-4140-a6d2-fe7f13b374a0" mimeType="application/json" />
+			</when>
+			<otherwise >
+				<set-payload value="#[null]" doc:name="Set Payload" doc:id="dac6b0dd-25c0-48ec-9e4a-feee4c8c57c8" />
+			</otherwise>
+		</choice>
+	</sub-flow> -->
+	<!--  <flow name="odatadraftFlow" doc:id="261b96a5-fcff-4d3a-a549-58a375c4acc5" >
+		<http:listener doc:name="Listener" doc:id="cd292174-106d-4652-90f4-17b3a1a7add9" config-ref="HTTP_Listener_config" path="/odata"/>
+		<db:select doc:id="95fbcd6a-1f09-4c04-97ae-93bee4d24b98" config-ref="Database_Config">
+			<db:sql >select * from american;</db:sql>
+		</db:select>
+		<ee:transform doc:name="Transform Message" doc:id="5d2b3b98-1ba9-4bd2-982d-a8d2b34e1c38" >
+			<ee:message >
+				<ee:set-payload resource="dwlScripts/odatadraftResponse.dwl" />
+			</ee:message>
+		</ee:transform>
+	</flow> -->
+	<sub-flow name="inlineCount" doc:id="1898322e-b0d7-4693-af7e-5b1eebb900f5" >
+		<choice doc:name="Choice" doc:id="ed02e9bd-15fb-4c77-a8d9-745060138981" >
+			<when doc:id="eff4b50f-fb56-41bb-ae28-2e9249f3b556" expression='#[attributes.queryParams.inlinecount == "allpages"]'>
+				<set-variable value='#[output application/java --- {"remoteEntityName":"american"}]' doc:name="Set Variable" doc:id="17979016-ad7b-4397-9941-91033e870f84" variableName="odata"/>
+				<ee:transform doc:name="Transform Message" doc:id="6ab14311-33c6-4aa2-a716-831b942202fc">
+			<ee:message>
+						<ee:set-payload resource="dwlScripts/inlineCountBuildQuery.dwl" />
+			
+</ee:message>		
+		</ee:transform>
+				<db:select doc:name="Select" doc:id="528a0ff7-e7ce-4335-a5b0-605c40197743" config-ref="Database_Config">
+					<db:sql >#[payload]</db:sql>
+				</db:select>
+			
+</when>
+		</choice>
+	</sub-flow>
+</mule>

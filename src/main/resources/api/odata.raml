@@ -1,0 +1,60 @@
+#%RAML 1.0 Library
+uses:
+  odata: libraries/odataLibrary.raml
+
+types:
+  flights:
+    (odata.remote): american
+    properties:
+      ID:
+        type: number
+        (odata.key): true
+        (odata.nullable): false
+      planeType:
+        type: string
+        (odata.nullable): false
+        (odata.key): true
+      code1:
+        type: string
+        (odata.nullable): true
+        (odata.key): false
+        required: false
+      takeOffDate:
+        type: string
+        (odata.nullable): true
+        (odata.key): false
+        required: false
+      code2:
+        type: string
+        (odata.nullable): true
+        (odata.key): false
+        required: false
+      price:
+        type: number
+        (odata.nullable): true
+        (odata.key): false
+        required: false
+      fromAirport:
+        type: string
+        (odata.nullable): true
+        (odata.key): false
+        required: false
+      seatsAvailable:
+        type: number
+        (odata.key): true
+        (odata.nullable): false
+      toAirport:
+        type: string
+        (odata.nullable): true
+        (odata.key): false
+        required: false
+      airlineName:
+        type: string
+        (odata.nullable): true
+        (odata.key): false
+        required: false
+      totalSeats:
+        type: number
+        (odata.nullable): true
+        (odata.key): false
+        required: false
